@@ -2,32 +2,43 @@ import streamlit as st
 import pandas as pd
 import pickle
 
-# =========================
-# LOAD MODEL
-# =========================
+# ==========================
+# LOAD MODEL & SCALER
+# ==========================
 with open("kmeans_model.pkl", "rb") as f:
     kmeans = pickle.load(f)
 
 with open("scaler.pkl", "rb") as f:
     scaler = pickle.load(f)
 
-# =========================
+# ==========================
 # PAGE CONFIG
-# =========================
+# ==========================
 st.set_page_config(
     page_title="Clustering HP Bekas",
     page_icon="📱",
     layout="centered"
 )
 
+# ==========================
+# HEADER
+# ==========================
 st.title("📱 Clustering HP Bekas")
-st.write("Masukkan spesifikasi HP untuk mengetahui kategori cluster HP bekas.")
+
+st.write(
+    """
+    Sistem ini digunakan untuk mengelompokkan HP bekas berdasarkan
+    spesifikasi perangkat menggunakan algoritma **K-Means Clustering**.
+    """
+)
 
 st.divider()
 
-# =========================
+# ==========================
 # INPUT USER
-# =========================
+# ==========================
+st.subheader("Masukkan Spesifikasi HP")
+
 screen_size = st.number_input(
     "Screen Size (inch)",
     min_value=4.0,
@@ -68,9 +79,9 @@ battery = st.number_input(
     step=100
 )
 
-# =========================
+# ==========================
 # PREDIKSI
-# =========================
+# ==========================
 if st.button("🔍 Prediksi Cluster"):
 
     data = pd.DataFrame(
@@ -91,59 +102,114 @@ if st.button("🔍 Prediksi Cluster"):
     )
 
     try:
-        # scaling
+
+        # Scaling
         data_scaled = scaler.transform(data)
 
-        # prediksi
+        # Prediksi
         cluster = int(kmeans.predict(data_scaled)[0])
-
-        st.success(f"Hasil Cluster: {cluster}")
-
-        st.subheader("📋 Ringkasan Spesifikasi")
-
-        st.write(f"**RAM:** {ram} GB")
-        st.write(f"**Internal Memory:** {internal_memory} GB")
-        st.write(f"**Battery:** {battery} mAh")
-        st.write(f"**Rear Camera:** {rear_camera} MP")
-        st.write(f"**Screen Size:** {screen_size} inch")
 
         st.divider()
 
+        # ==========================
+        # HASIL
+        # ==========================
+        cluster_names = {
+            0: "Entry Level",
+            1: "Mid Range",
+            2: "Entry Level Battery Besar"
+        }
+
+        st.success(
+            f"Hasil Prediksi: {cluster_names.get(cluster, f'Cluster {cluster}')}"
+        )
+
+        # ==========================
+        # RINGKASAN SPESIFIKASI
+        # ==========================
+        st.subheader("📋 Ringkasan Spesifikasi")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("RAM", f"{ram} GB")
+            st.metric("Storage", f"{internal_memory} GB")
+            st.metric("Battery", f"{battery} mAh")
+
+        with col2:
+            st.metric("Rear Camera", f"{rear_camera} MP")
+            st.metric("Screen Size", f"{screen_size} inch")
+
+        st.divider()
+
+        # ==========================
+        # INTERPRETASI CLUSTER
+        # ==========================
         st.subheader("📊 Interpretasi Cluster")
 
         if cluster == 0:
-            st.info("""
-            **Cluster 0**
 
-            Karakteristik:
-            - Spesifikasi dasar
-            - Cocok untuk penggunaan ringan
-            - Harga cenderung lebih terjangkau
-            """)
+            st.info(
+                """
+### 📱 Cluster 0 — Entry Level
+
+**Karakteristik:**
+- Cocok untuk penggunaan ringan
+- Harga relatif murah
+- RAM dan storage standar
+- Cocok untuk chat, browsing, dan media sosial
+
+**Rata-rata Cluster:**
+- RAM : 3.55 GB
+- Storage : 45.13 GB
+- Battery : 1946.14 mAh
+- Kamera : 5.69 MP
+                """
+            )
 
         elif cluster == 1:
-            st.info("""
-            **Cluster 1**
 
-            Karakteristik:
-            - Spesifikasi menengah
-            - Cocok untuk penggunaan sehari-hari
-            - Performa cukup baik untuk multitasking
-            """)
+            st.success(
+                """
+### 🚀 Cluster 1 — Mid Range
+
+**Karakteristik:**
+- Cocok untuk multitasking
+- Performa cukup baik
+- Penyimpanan lebih besar
+- Cocok untuk gaming menengah
+
+**Rata-rata Cluster:**
+- RAM : 4.23 GB
+- Storage : 57.17 GB
+- Battery : 3393.63 mAh
+- Kamera : 12.14 MP
+                """
+            )
 
         elif cluster == 2:
-            st.info("""
-            **Cluster 2**
 
-            Karakteristik:
-            - Spesifikasi tinggi
-            - RAM dan memori besar
-            - Kamera dan baterai unggul
-            - Cocok untuk gaming dan produktivitas
-            """)
+            st.warning(
+                """
+### 🔋 Cluster 2 — Entry Level Battery Besar
+
+**Karakteristik:**
+- Cocok untuk penggunaan ringan
+- Daya tahan baterai sangat baik
+- Harga relatif murah
+- Cocok untuk penggunaan harian jangka panjang
+
+**Rata-rata Cluster:**
+- RAM : 3.90 GB
+- Storage : 46.11 GB
+- Battery : 5791.48 mAh
+- Kamera : 6.92 MP
+                """
+            )
 
         else:
-            st.warning(f"Cluster terdeteksi: {cluster}")
+
+            st.write(f"Cluster terdeteksi: {cluster}")
 
     except Exception as e:
         st.error(f"Terjadi error: {e}")
