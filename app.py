@@ -2,40 +2,92 @@ import streamlit as st
 import pandas as pd
 import pickle
 
-# load model & scaler
-kmeans = pickle.load(open("kmeans_model.pkl", "rb"))
-scaler = pickle.load(open("scaler.pkl", "rb"))
+# Load model dan scaler
+with open("kmeans_model.pkl", "rb") as f:
+    kmeans = pickle.load(f)
+
+with open("scaler.pkl", "rb") as f:
+    scaler = pickle.load(f)
+
+# Tampilan aplikasi
+st.set_page_config(page_title="Clustering HP Bekas", page_icon="📱")
 
 st.title("📱 Clustering HP Bekas")
+st.write("Masukkan spesifikasi HP untuk mengetahui cluster-nya.")
 
-st.write("Masukkan spesifikasi HP:")
+# Input fitur
+screen_size = st.number_input(
+    "Screen Size (inch)",
+    min_value=0.0,
+    value=6.5,
+    step=0.1
+)
 
-screen_size = st.number_input("Screen Size")
-rear_camera = st.number_input("Rear Camera (MP)")
-front_camera = st.number_input("Front Camera (MP)")
-internal_memory = st.number_input("Internal Memory (GB)")
-ram = st.number_input("RAM (GB)")
-battery = st.number_input("Battery (mAh)")
-weight = st.number_input("Weight (gram)")
-days_used = st.number_input("Days Used")
+rear_camera = st.number_input(
+    "Rear Camera (MP)",
+    min_value=0.0,
+    value=50.0,
+    step=1.0
+)
 
+internal_memory = st.number_input(
+    "Internal Memory (GB)",
+    min_value=0,
+    value=128,
+    step=1
+)
+
+ram = st.number_input(
+    "RAM (GB)",
+    min_value=0,
+    value=8,
+    step=1
+)
+
+battery = st.number_input(
+    "Battery (mAh)",
+    min_value=0,
+    value=5000,
+    step=100
+)
+
+# Tombol prediksi
 if st.button("Prediksi Cluster"):
-    
-    data = pd.DataFrame([[
-        screen_size,
-        rear_camera,
-        front_camera,
-        internal_memory,
-        ram,
-        battery,
-        weight,
-        days_used
-    ]])
 
-    # scaling
-    data_scaled = scaler.transform(data)
+    # Harus sama persis dengan urutan fitur saat training
+    data = pd.DataFrame(
+        [[
+            ram,
+            internal_memory,
+            battery,
+            rear_camera,
+            screen_size
+        ]],
+        columns=[
+            "ram",
+            "internal_memory",
+            "battery",
+            "rear_camera_mp",
+            "screen_size"
+        ]
+    )
 
-    # prediksi
-    cluster = kmeans.predict(data_scaled)[0]
+    try:
+        # Scaling
+        data_scaled = scaler.transform(data)
 
-    st.success(f"Hasil Cluster: {cluster}")
+        # Prediksi cluster
+        cluster = kmeans.predict(data_scaled)[0]
+
+        st.success(f"Hasil Cluster: {cluster}")
+
+        # Interpretasi cluster (opsional)
+        if cluster == 0:
+            st.info("Cluster 0")
+        elif cluster == 1:
+            st.info("Cluster 1")
+        elif cluster == 2:
+            st.info("Cluster 2")
+
+    except Exception as e:
+        st.error(f"Terjadi error: {e}")
