@@ -22,6 +22,17 @@ with open("scaler.pkl", "rb") as f:
     scaler = pickle.load(f)
 
 # ==========================
+# DAFTAR MERK HP
+# ==========================
+DAFTAR_MERK = [
+    'Acer', 'Alcatel', 'Apple', 'Asus', 'BlackBerry', 'Celkon', 'Coolpad',
+    'Gionee', 'Google', 'HTC', 'Honor', 'Huawei', 'Infinix', 'Karbonn',
+    'LG', 'Lava', 'Lenovo', 'Meizu', 'Micromax', 'Microsoft', 'Motorola',
+    'Nokia', 'OnePlus', 'Oppo', 'Others', 'Panasonic', 'Realme', 'Samsung',
+    'Sony', 'Spice', 'Vivo', 'XOLO', 'Xiaomi', 'ZTE'
+]
+
+# ==========================
 # HEADER
 # ==========================
 st.title("📱 Sistem Klasifikasi Cluster HP Bekas")
@@ -41,6 +52,14 @@ st.divider()
 # INPUT
 # ==========================
 st.subheader("🔧 Spesifikasi HP")
+
+# Baris 1: Merk HP (full width)
+device_brand = st.selectbox(
+    "Merk HP",
+    options=DAFTAR_MERK,
+    index=DAFTAR_MERK.index('Samsung'),
+    help="Pilih merk HP bekas yang ingin diklasifikasikan"
+)
 
 col1, col2 = st.columns(2)
 
@@ -122,11 +141,11 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.divider()
 
     # ==========================
-    # HASIL
+    # HASIL + MERK HP
     # ==========================
     if cluster == 0:
 
-        st.success("📱 Cluster 0 — Entry Level")
+        st.success(f"📱 {device_brand} — Cluster 0: Entry Level")
 
         kategori = """
         Cocok untuk penggunaan ringan seperti:
@@ -138,7 +157,7 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
 
     elif cluster == 1:
 
-        st.success("🚀 Cluster 1 — Mid Range")
+        st.success(f"🚀 {device_brand} — Cluster 1: Mid Range")
 
         kategori = """
         Cocok untuk:
@@ -150,7 +169,7 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
 
     else:
 
-        st.success("🔋 Cluster 2 — Entry Level Battery Besar")
+        st.success(f"🔋 {device_brand} — Cluster 2: Entry Level Battery Besar")
 
         kategori = """
         Cocok untuk:
@@ -162,9 +181,12 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.markdown(kategori)
 
     # ==========================
-    # RINGKASAN
+    # RINGKASAN SPESIFIKASI
     # ==========================
     st.subheader("📋 Ringkasan Spesifikasi")
+
+    # Tampilkan merk di baris tersendiri agar menonjol
+    st.markdown(f"**Merk HP:** {device_brand}")
 
     c1, c2, c3, c4, c5 = st.columns(5)
 
@@ -199,8 +221,8 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
 
     if cluster == 0:
 
-        st.info("""
-**Cluster 0 — Entry Level**
+        st.info(f"""
+**Cluster 0 — Entry Level** *(diprediksi untuk {device_brand})*
 
 Rata-rata:
 - RAM : 3.55 GB
@@ -216,8 +238,8 @@ Karakteristik:
 
     elif cluster == 1:
 
-        st.info("""
-**Cluster 1 — Mid Range**
+        st.info(f"""
+**Cluster 1 — Mid Range** *(diprediksi untuk {device_brand})*
 
 Rata-rata:
 - RAM : 4.23 GB
@@ -233,8 +255,8 @@ Karakteristik:
 
     else:
 
-        st.info("""
-**Cluster 2 — Entry Level Battery Besar**
+        st.info(f"""
+**Cluster 2 — Entry Level Battery Besar** *(diprediksi untuk {device_brand})*
 
 Rata-rata:
 - RAM : 3.90 GB
