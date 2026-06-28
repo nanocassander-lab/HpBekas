@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
-import pickle
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 # ==========================
 # PAGE CONFIG
@@ -13,29 +15,49 @@ st.set_page_config(
 )
 
 # ==========================
-# LOAD MODEL & DATA
+# LOAD DATA
 # ==========================
-@st.cache_resource
-def load_models():
-    with open("rf_optuna.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open("scaler.pkl", "rb") as f:
-        scaler = pickle.load(f)
-    return model, scaler
-
 @st.cache_data
 def load_data():
     df = pd.read_csv("hasil_clustering_hp.csv")
     return df
 
-model, scaler = load_models()
+@st.cache_resource
+def train_model(df):
+    features = ["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"]
+    target = "Cluster"
+
+    df_clean = df.dropna(subset=features + [target])
+    X = df_clean[features]
+    y = df_clean[target]
+
+    scaler = MinMaxScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_scaled, y, test_size=0.2, random_state=42
+    )
+
+    model = RandomForestClassifier(
+        n_estimators=200,
+        max_depth=10,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        random_state=42
+    )
+    model.fit(X_train, y_train)
+
+    akurasi = model.score(X_test, y_test)
+    return model, scaler, akurasi
+
 df_clustered = load_data()
+model, scaler, akurasi = train_model(df_clustered)
 
 # ==========================
 # MAPPING CONTOH TIPE HP
 # ==========================
 CONTOH_TIPE_HP = {
-    0: {  # Entry Level: RAM ~3.5GB, Battery ~1946mAh, Kamera ~5.7MP
+    0: {
         "Samsung":  ["Samsung Galaxy A03", "Samsung Galaxy A03s", "Samsung Galaxy M02"],
         "LG":       ["LG K22", "LG K41S", "LG K51S"],
         "Nokia":    ["Nokia C21", "Nokia C31", "Nokia G11"],
@@ -47,7 +69,7 @@ CONTOH_TIPE_HP = {
         "Motorola": ["Motorola Moto E7", "Motorola Moto E7i Power"],
         "Xiaomi":   ["Xiaomi Redmi 9A", "Xiaomi Redmi 9C"],
     },
-    1: {  # Mid Range: RAM ~4.2GB, Battery ~3393mAh, Kamera ~12MP
+    1: {
         "Samsung":  ["Samsung Galaxy A25", "Samsung Galaxy A35", "Samsung Galaxy M34"],
         "Huawei":   ["Huawei P30 Lite", "Huawei Nova 5T", "Huawei Y8p"],
         "Honor":    ["Honor X8", "Honor X7", "Honor 90 Lite"],
@@ -59,7 +81,7 @@ CONTOH_TIPE_HP = {
         "Realme":   ["Realme C33", "Realme 9i", "Realme Narzo 50"],
         "Motorola": ["Motorola Moto G32", "Motorola Moto G42", "Motorola Moto G52"],
     },
-    2: {  # Entry Level Battery Besar: RAM ~3.9GB, Battery ~5791mAh, Kamera ~6.9MP
+    2: {
         "Samsung":  ["Samsung Galaxy M23", "Samsung Galaxy M33", "Samsung Galaxy F23"],
         "Huawei":   ["Huawei Y9 Prime", "Huawei Y9a", "Huawei Mate 40 Lite"],
         "Lenovo":   ["Lenovo K12 Pro", "Lenovo Tab P11"],
@@ -87,6 +109,8 @@ Sistem ini menggabungkan:
 Masukkan spesifikasi HP untuk mengetahui kategori cluster-nya.
 """)
 
+st.caption(f"Akurasi model: {akurasi*100:.2f}%")
+
 st.divider()
 
 # ==========================
@@ -104,7 +128,6 @@ with col1:
         value=6.5,
         step=0.1
     )
-
     rear_camera = st.number_input(
         "Rear Camera (MP)",
         min_value=1.0,
@@ -112,7 +135,6 @@ with col1:
         value=50.0,
         step=1.0
     )
-
     internal_memory = st.number_input(
         "Internal Memory (GB)",
         min_value=16,
@@ -129,7 +151,6 @@ with col2:
         value=8,
         step=1
     )
-
     battery = st.number_input(
         "Battery (mAh)",
         min_value=1000,
@@ -145,7 +166,6 @@ st.divider()
 # ==========================
 if st.button("🚀 Prediksi Cluster", use_container_width=True):
 
-    # Konversi screen_size inch -> cm (data CSV dalam cm)
     screen_size_cm = screen_size * 2.54
 
     data = pd.DataFrame(
@@ -192,7 +212,7 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.markdown(kategori)
 
     # ==========================
-    # MERK HP DI CLUSTER INI (dari dataset)
+    # MERK HP DI CLUSTER INI
     # ==========================
     st.subheader("🏷️ Merk HP dalam Cluster Ini")
 
@@ -235,7 +255,7 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.divider()
 
     # ==========================
-    # DETAIL SPESIFIKASI PER MERK (dari dataset)
+    # DETAIL SPESIFIKASI PER MERK
     # ==========================
     st.subheader("🔍 Detail Spesifikasi per Merk")
 
