@@ -320,38 +320,6 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.divider()
 
     # ==========================
-    # DETAIL SPESIFIKASI PER MERK
-    # ==========================
-    st.subheader("🔍 Detail Spesifikasi per Merk")
-
-    merk_list = top_brands["Merk HP"].tolist()
-    selected_brand = st.selectbox("Pilih merk untuk lihat rata-rata speknya:", merk_list)
-
-    df_brand = df_cluster[df_cluster["device_brand"] == selected_brand]
-    avg_specs = df_brand[["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"]].mean()
-    avg_specs["screen_size"] = avg_specs["screen_size"] / 2.54
-
-    col_d1, col_d2, col_d3, col_d4, col_d5 = st.columns(5)
-    col_d1.metric("Rata-rata RAM", f"{avg_specs['ram']:.1f} GB")
-    col_d2.metric("Rata-rata Storage", f"{avg_specs['internal_memory']:.0f} GB")
-    col_d3.metric("Rata-rata Battery", f"{avg_specs['battery']:.0f} mAh")
-    col_d4.metric("Rata-rata Kamera", f"{avg_specs['rear_camera_mp']:.1f} MP")
-    col_d5.metric("Rata-rata Layar", f"{avg_specs['screen_size']:.1f} inch")
-
-    st.markdown(f"**Total {selected_brand} di cluster ini: {len(df_brand)} unit**")
-
-    with st.expander(f"📋 Lihat data {selected_brand} di cluster ini"):
-        tampil_cols = ["device_brand", "ram", "internal_memory", "battery",
-                       "rear_camera_mp", "screen_size", "release_year", "normalized_used_price"]
-        df_show = df_brand[tampil_cols].copy()
-        df_show["screen_size"] = (df_show["screen_size"] / 2.54).round(1)
-        df_show.columns = ["Merk", "RAM (GB)", "Storage (GB)", "Battery (mAh)",
-                            "Kamera (MP)", "Layar (inch)", "Tahun Rilis", "Harga Bekas (norm)"]
-        st.dataframe(df_show.reset_index(drop=True), use_container_width=True)
-
-    st.divider()
-
-    # ==========================
     # RINGKASAN SPESIFIKASI INPUT
     # ==========================
     st.subheader("📋 Ringkasan Spesifikasi Input")
