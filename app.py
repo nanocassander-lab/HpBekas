@@ -95,6 +95,74 @@ CONTOH_TIPE_HP = {
 }
 
 # ==========================
+# LABEL MAPPING UNTUK SLIDER
+# ==========================
+RAM_OPTIONS = {
+    "1 GB — HP lama": 1,
+    "2 GB — Entry level lama": 2,
+    "3 GB — Entry level": 3,
+    "4 GB — Entry level / Menengah": 4,
+    "6 GB — Mid-range": 6,
+    "8 GB — Mid-range / High-end": 8,
+    "12 GB — High-end": 12,
+    "16 GB — Flagship / Gaming": 16,
+    "18 GB — Gaming premium": 18,
+    "24 GB — Gaming premium plus": 24,
+}
+
+STORAGE_OPTIONS = {
+    "16 GB — Sangat terbatas": 16,
+    "32 GB — Entry level lama": 32,
+    "64 GB — Entry level": 64,
+    "128 GB — Standar saat ini": 128,
+    "256 GB — Menengah ke atas": 256,
+    "512 GB — High-end": 512,
+    "1024 GB — Flagship": 1024,
+}
+
+BATTERY_OPTIONS = {
+    "1000 mAh — Sangat kecil": 1000,
+    "2000 mAh — Kecil": 2000,
+    "3000 mAh — Standar lama": 3000,
+    "3500 mAh — Standar": 3500,
+    "4000 mAh — Cukup": 4000,
+    "4500 mAh — Baik": 4500,
+    "5000 mAh — Besar (standar kini)": 5000,
+    "5500 mAh — Besar": 5500,
+    "6000 mAh — Sangat besar": 6000,
+    "7000 mAh — Extra besar": 7000,
+    "10000 mAh — Power bank HP": 10000,
+}
+
+CAMERA_OPTIONS = {
+    "2 MP — Sangat rendah": 2,
+    "5 MP — Entry level lama": 5,
+    "8 MP — Entry level": 8,
+    "12 MP — Standar": 12,
+    "13 MP — Standar menengah": 13,
+    "16 MP — Menengah": 16,
+    "32 MP — Mid-range": 32,
+    "48 MP — Mid-range tinggi": 48,
+    "64 MP — High-end": 64,
+    "108 MP — Flagship": 108,
+    "200 MP — Ultra flagship": 200,
+}
+
+SCREEN_OPTIONS = {
+    "4.0\" — Sangat kecil": 4.0,
+    "4.7\" — Kecil": 4.7,
+    "5.0\" — Kompak": 5.0,
+    "5.5\" — Standar lama": 5.5,
+    "6.0\" — Standar": 6.0,
+    "6.1\" — Standar modern": 6.1,
+    "6.5\" — Besar": 6.5,
+    "6.7\" — Besar / Plus": 6.7,
+    "6.9\" — Extra besar": 6.9,
+    "7.0\" — Tablet mini": 7.0,
+    "8.0\" — Tablet": 8.0,
+}
+
+# ==========================
 # HEADER
 # ==========================
 st.title("📱 Sistem Klasifikasi Cluster HP Bekas")
@@ -117,87 +185,44 @@ st.divider()
 # ==========================
 st.subheader("🔧 Spesifikasi HP")
 
-# Preset spesifikasi cepat
-st.markdown("**⚡ Pilih Preset Spesifikasi (Opsional):**")
-
-preset_col1, preset_col2, preset_col3, preset_col4 = st.columns(4)
-
-preset = None
-with preset_col1:
-    if st.button("📱 Entry Level", use_container_width=True):
-        preset = "entry"
-with preset_col2:
-    if st.button("🚀 Mid Range", use_container_width=True):
-        preset = "mid"
-with preset_col3:
-    if st.button("🔋 Battery Besar", use_container_width=True):
-        preset = "battery"
-with preset_col4:
-    if st.button("🔄 Reset", use_container_width=True):
-        preset = "reset"
-
-# Set nilai default berdasarkan preset
-if preset == "entry":
-    default_ram = 3
-    default_storage = 32
-    default_battery = 2000
-    default_camera = 8.0
-    default_screen = 5.5
-elif preset == "mid":
-    default_ram = 6
-    default_storage = 128
-    default_battery = 4000
-    default_camera = 48.0
-    default_screen = 6.5
-elif preset == "battery":
-    default_ram = 4
-    default_storage = 64
-    default_battery = 6000
-    default_camera = 13.0
-    default_screen = 6.5
-else:
-    default_ram = 4
-    default_storage = 128
-    default_battery = 5000
-    default_camera = 50.0
-    default_screen = 6.5
-
-st.divider()
-
 col1, col2 = st.columns(2)
 
 with col1:
-    screen_size = st.slider(
-        "📐 Screen Size (inch)",
-        min_value=4.0,
-        max_value=8.0,
-        value=float(default_screen),
-        step=0.1
+    ram_label = st.select_slider(
+        "🧠 RAM",
+        options=list(RAM_OPTIONS.keys()),
+        value="4 GB — Entry level / Menengah"
     )
-    rear_camera = st.slider(
-        "📷 Rear Camera (MP)",
-        min_value=1.0,
-        max_value=200.0,
-        value=float(default_camera),
-        step=1.0
+    ram = RAM_OPTIONS[ram_label]
+
+    storage_label = st.select_slider(
+        "💾 Internal Memory",
+        options=list(STORAGE_OPTIONS.keys()),
+        value="128 GB — Standar saat ini"
     )
-    internal_memory = st.select_slider(
-        "💾 Internal Memory (GB)",
-        options=[16, 32, 64, 128, 256, 512, 1024],
-        value=default_storage
+    internal_memory = STORAGE_OPTIONS[storage_label]
+
+    battery_label = st.select_slider(
+        "🔋 Battery",
+        options=list(BATTERY_OPTIONS.keys()),
+        value="5000 mAh — Besar (standar kini)"
     )
+    battery = BATTERY_OPTIONS[battery_label]
 
 with col2:
-    ram = st.select_slider(
-        "🧠 RAM (GB)",
-        options=[1, 2, 3, 4, 6, 8, 12, 16, 32],
-        value=default_ram
+    camera_label = st.select_slider(
+        "📷 Rear Camera",
+        options=list(CAMERA_OPTIONS.keys()),
+        value="48 MP — Mid-range tinggi"
     )
-    battery = st.select_slider(
-        "🔋 Battery (mAh)",
-        options=[1000, 2000, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 7000, 10000],
-        value=default_battery
+    rear_camera = CAMERA_OPTIONS[camera_label]
+
+    screen_label = st.select_slider(
+        "📐 Screen Size",
+        options=list(SCREEN_OPTIONS.keys()),
+        value="6.5\" — Besar"
     )
+    screen_size = SCREEN_OPTIONS[screen_label]
 
 st.divider()
 
