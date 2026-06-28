@@ -13,24 +13,37 @@ st.set_page_config(
 )
 
 # ==========================
-# LOAD MODEL
+# LOAD MODEL & DATA
 # ==========================
-with open("rf_optuna.pkl", "rb") as f:
-    model = pickle.load(f)
+@st.cache_resource
+def load_models():
+    with open("rf_optuna.pkl", "rb") as f:
+        model = pickle.load(f)
+    with open("scaler.pkl", "rb") as f:
+        scaler = pickle.load(f)
+    with open("kmeans_model.pkl", "rb") as f:
+        kmeans = pickle.load(f)
+    return model, scaler, kmeans
 
-with open("scaler.pkl", "rb") as f:
-    scaler = pickle.load(f)
+@st.cache_data
+def load_data():
+    df = pd.read_csv("used_device_data.csv")
+    df_clean = df.dropna(subset=["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"])
+    return df_clean
 
-# ==========================
-# DAFTAR MERK HP
-# ==========================
-DAFTAR_MERK = [
-    'Acer', 'Alcatel', 'Apple', 'Asus', 'BlackBerry', 'Celkon', 'Coolpad',
-    'Gionee', 'Google', 'HTC', 'Honor', 'Huawei', 'Infinix', 'Karbonn',
-    'LG', 'Lava', 'Lenovo', 'Meizu', 'Micromax', 'Microsoft', 'Motorola',
-    'Nokia', 'OnePlus', 'Oppo', 'Others', 'Panasonic', 'Realme', 'Samsung',
-    'Sony', 'Spice', 'Vivo', 'XOLO', 'Xiaomi', 'ZTE'
-]
+model, scaler, kmeans = load_models()
+df = load_data()
+
+# Assign cluster ke seluruh data menggunakan KMeans
+@st.cache_data
+def assign_clusters(df):
+    features = df[["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"]]
+    features_scaled = scaler.transform(features)
+    df = df.copy()
+    df["cluster"] = kmeans.predict(features_scaled)
+    return df
+
+df_clustered = assign_clusters(df)
 
 # ==========================
 # HEADER
@@ -53,18 +66,9 @@ st.divider()
 # ==========================
 st.subheader("🔧 Spesifikasi HP")
 
-# Baris 1: Merk HP (full width)
-device_brand = st.selectbox(
-    "Merk HP",
-    options=DAFTAR_MERK,
-    index=DAFTAR_MERK.index('Samsung'),
-    help="Pilih merk HP bekas yang ingin diklasifikasikan"
-)
-
 col1, col2 = st.columns(2)
 
 with col1:
-
     screen_size = st.number_input(
         "Screen Size (inch)",
         min_value=4.0,
@@ -90,7 +94,6 @@ with col1:
     )
 
 with col2:
-
     ram = st.number_input(
         "RAM (GB)",
         min_value=1,
@@ -114,39 +117,25 @@ st.divider()
 # ==========================
 if st.button("🚀 Prediksi Cluster", use_container_width=True):
 
+    # Konversi screen_size inch -> cm (karena data CSV dalam cm)
+    screen_size_cm = screen_size * 2.54
+
     data = pd.DataFrame(
-        [[
-            ram,
-            internal_memory,
-            battery,
-            rear_camera,
-            screen_size
-        ]],
-        columns=[
-            "ram",
-            "internal_memory",
-            "battery",
-            "rear_camera_mp",
-            "screen_size"
-        ]
+        [[ram, internal_memory, battery, rear_camera, screen_size_cm]],
+        columns=["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"]
     )
 
     data_scaled = scaler.transform(data)
-
     cluster = int(model.predict(data_scaled)[0])
-
-    # Probabilitas
     proba = model.predict_proba(data_scaled)[0]
 
     st.divider()
 
     # ==========================
-    # HASIL + MERK HP
+    # HASIL CLUSTER
     # ==========================
     if cluster == 0:
-
-        st.success(f"📱 {device_brand} — Cluster 0: Entry Level")
-
+        st.success("📱 Cluster 0 — Entry Level")
         kategori = """
         Cocok untuk penggunaan ringan seperti:
         - Chatting
@@ -154,11 +143,8 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
         - Browsing
         - Aktivitas harian sederhana
         """
-
     elif cluster == 1:
-
-        st.success(f"🚀 {device_brand} — Cluster 1: Mid Range")
-
+        st.success("🚀 Cluster 1 — Mid Range")
         kategori = """
         Cocok untuk:
         - Multitasking
@@ -166,11 +152,8 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
         - Produktivitas harian
         - Penggunaan yang lebih intensif
         """
-
     else:
-
-        st.success(f"🔋 {device_brand} — Cluster 2: Entry Level Battery Besar")
-
+        st.success("🔋 Cluster 2 — Entry Level Battery Besar")
         kategori = """
         Cocok untuk:
         - Penggunaan ringan
@@ -181,15 +164,35 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.markdown(kategori)
 
     # ==========================
+    # MERK HP DI CLUSTER INI
+    # ==========================
+    st.subheader("🏷️ Merk HP dalam Cluster Ini")
+
+    df_cluster = df_clustered[df_clustered["cluster"] == cluster]
+    brand_counts = df_cluster["device_brand"].value_counts().reset_index()
+    brand_counts.columns = ["Merk HP", "Jumlah Data"]
+
+    # Tampilkan top 10 merk (exclude 'Others')
+    top_brands = brand_counts[brand_counts["Merk HP"] != "Others"].head(10)
+
+    col_brand1, col_brand2 = st.columns([2, 3])
+
+    with col_brand1:
+        st.markdown("**Top Merk HP di Cluster Ini:**")
+        for i, row in top_brands.iterrows():
+            st.markdown(f"- **{row['Merk HP']}** ({row['Jumlah Data']} unit)")
+
+    with col_brand2:
+        st.bar_chart(top_brands.set_index("Merk HP")["Jumlah Data"])
+
+    st.divider()
+
+    # ==========================
     # RINGKASAN SPESIFIKASI
     # ==========================
-    st.subheader("📋 Ringkasan Spesifikasi")
-
-    # Tampilkan merk di baris tersendiri agar menonjol
-    st.markdown(f"**Merk HP:** {device_brand}")
+    st.subheader("📋 Ringkasan Spesifikasi Input")
 
     c1, c2, c3, c4, c5 = st.columns(5)
-
     c1.metric("RAM", f"{ram} GB")
     c2.metric("Storage", f"{internal_memory} GB")
     c3.metric("Battery", f"{battery} mAh")
@@ -215,14 +218,13 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.divider()
 
     # ==========================
-    # INTERPRETASI
+    # PROFIL CLUSTER
     # ==========================
     st.subheader("📊 Profil Cluster")
 
     if cluster == 0:
-
-        st.info(f"""
-**Cluster 0 — Entry Level** *(diprediksi untuk {device_brand})*
+        st.info("""
+**Cluster 0 — Entry Level**
 
 Rata-rata:
 - RAM : 3.55 GB
@@ -235,11 +237,9 @@ Karakteristik:
 - Spesifikasi standar
 - Cocok untuk penggunaan ringan
 """)
-
     elif cluster == 1:
-
-        st.info(f"""
-**Cluster 1 — Mid Range** *(diprediksi untuk {device_brand})*
+        st.info("""
+**Cluster 1 — Mid Range**
 
 Rata-rata:
 - RAM : 4.23 GB
@@ -252,11 +252,9 @@ Karakteristik:
 - Performa lebih baik
 - Cocok untuk gaming menengah
 """)
-
     else:
-
-        st.info(f"""
-**Cluster 2 — Entry Level Battery Besar** *(diprediksi untuk {device_brand})*
+        st.info("""
+**Cluster 2 — Entry Level Battery Besar**
 
 Rata-rata:
 - RAM : 3.90 GB
@@ -271,7 +269,6 @@ Karakteristik:
 """)
 
 st.divider()
-
 st.caption(
     "Model yang digunakan: Random Forest hasil tuning Optuna dengan target cluster dari K-Means Clustering."
 )
