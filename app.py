@@ -21,15 +21,29 @@ def load_models():
         model = pickle.load(f)
     with open("scaler.pkl", "rb") as f:
         scaler = pickle.load(f)
-    return model, scaler
+    with open("kmeans_model.pkl", "rb") as f:
+        kmeans = pickle.load(f)
+    return model, scaler, kmeans
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("hasil_clustering_hp.csv")
+    df = pd.read_csv("used_device_data.csv")
+    df_clean = df.dropna(subset=["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"])
+    return df_clean
+
+model, scaler, kmeans = load_models()
+df = load_data()
+
+# Assign cluster ke seluruh data menggunakan KMeans
+@st.cache_data
+def assign_clusters(df):
+    features = df[["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"]]
+    features_scaled = scaler.transform(features)
+    df = df.copy()
+    df["cluster"] = kmeans.predict(features_scaled)
     return df
 
-model, scaler = load_models()
-df_clustered = load_data()
+df_clustered = assign_clusters(df)
 
 # ==========================
 # HEADER
@@ -103,7 +117,7 @@ st.divider()
 # ==========================
 if st.button("🚀 Prediksi Cluster", use_container_width=True):
 
-    # Konversi screen_size inch -> cm (data CSV dalam cm)
+    # Konversi screen_size inch -> cm (karena data CSV dalam cm)
     screen_size_cm = screen_size * 2.54
 
     data = pd.DataFrame(
@@ -154,22 +168,18 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     # ==========================
     st.subheader("🏷️ Merk HP dalam Cluster Ini")
 
-    df_cluster = df_clustered[df_clustered["Cluster"] == cluster]
-
-    # Top merk (exclude 'Others')
-    brand_counts = (
-        df_cluster[df_cluster["device_brand"] != "Others"]["device_brand"]
-        .value_counts()
-        .reset_index()
-    )
+    df_cluster = df_clustered[df_clustered["cluster"] == cluster]
+    brand_counts = df_cluster["device_brand"].value_counts().reset_index()
     brand_counts.columns = ["Merk HP", "Jumlah Data"]
-    top_brands = brand_counts.head(10)
+
+    # Tampilkan top 10 merk (exclude 'Others')
+    top_brands = brand_counts[brand_counts["Merk HP"] != "Others"].head(10)
 
     col_brand1, col_brand2 = st.columns([2, 3])
 
     with col_brand1:
         st.markdown("**Top Merk HP di Cluster Ini:**")
-        for _, row in top_brands.iterrows():
+        for i, row in top_brands.iterrows():
             st.markdown(f"- **{row['Merk HP']}** ({row['Jumlah Data']} unit)")
 
     with col_brand2:
@@ -178,41 +188,7 @@ if st.button("🚀 Prediksi Cluster", use_container_width=True):
     st.divider()
 
     # ==========================
-    # DETAIL DATA PER MERK
-    # ==========================
-    st.subheader("🔍 Detail Spesifikasi per Merk")
-
-    merk_list = top_brands["Merk HP"].tolist()
-    selected_brand = st.selectbox("Pilih merk untuk lihat detail speknya:", merk_list)
-
-    df_brand = df_cluster[df_cluster["device_brand"] == selected_brand]
-
-    avg_specs = df_brand[["ram", "internal_memory", "battery", "rear_camera_mp", "screen_size"]].mean()
-    avg_specs["screen_size"] = avg_specs["screen_size"] / 2.54  # balik ke inch untuk tampilan
-
-    col_d1, col_d2, col_d3, col_d4, col_d5 = st.columns(5)
-    col_d1.metric("Rata-rata RAM", f"{avg_specs['ram']:.1f} GB")
-    col_d2.metric("Rata-rata Storage", f"{avg_specs['internal_memory']:.0f} GB")
-    col_d3.metric("Rata-rata Battery", f"{avg_specs['battery']:.0f} mAh")
-    col_d4.metric("Rata-rata Kamera", f"{avg_specs['rear_camera_mp']:.1f} MP")
-    col_d5.metric("Rata-rata Layar", f"{avg_specs['screen_size']:.1f} inch")
-
-    st.markdown(f"**Total {selected_brand} di cluster ini: {len(df_brand)} unit**")
-
-    # Tampilkan sample data HP merk tersebut
-    with st.expander(f"📋 Lihat data {selected_brand} di cluster ini"):
-        tampil_cols = ["device_brand", "ram", "internal_memory", "battery",
-                       "rear_camera_mp", "screen_size", "release_year", "normalized_used_price"]
-        df_show = df_brand[tampil_cols].copy()
-        df_show["screen_size"] = (df_show["screen_size"] / 2.54).round(1)
-        df_show.columns = ["Merk", "RAM (GB)", "Storage (GB)", "Battery (mAh)",
-                            "Kamera (MP)", "Layar (inch)", "Tahun Rilis", "Harga Bekas (norm)"]
-        st.dataframe(df_show.reset_index(drop=True), use_container_width=True)
-
-    st.divider()
-
-    # ==========================
-    # RINGKASAN SPESIFIKASI INPUT
+    # RINGKASAN SPESIFIKASI
     # ==========================
     st.subheader("📋 Ringkasan Spesifikasi Input")
 
